@@ -2,6 +2,11 @@
 
 Heavily documented sample code for https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
 
+## Added functionality
+
+Added semantic token capability to color text with meaningful tokens.
+
+
 ## Functionality
 
 This Language Server works for plain text file. It has the following language features:
