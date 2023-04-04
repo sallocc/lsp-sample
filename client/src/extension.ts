@@ -15,8 +15,10 @@ import {
 	TransportKind
 } from 'vscode-languageclient/node';
 
+import * as ohm from 'ohm-js';
 
 let client: LanguageClient;
+
 
 const tokenTypesMap = new Map<string, number>();
 const tokenModifiersMap = new Map<string, number>();
