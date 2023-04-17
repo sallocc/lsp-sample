@@ -66,6 +66,7 @@
 		"test": "sh ./scripts/e2e.sh"
 	},
 	"devDependencies": {
+		"@ohm-js/cli": "^2.0.0",
 		"@types/mocha": "^9.1.0",
 		"@types/node": "^16.11.7",
 		"@typescript-eslint/eslint-plugin": "^5.42.0",

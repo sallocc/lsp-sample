@@ -1,0 +1,41 @@
+Jay {
+	Prog = Expr end
+	| "" end
+	Expr = Expr orOp Expr1
+	| Expr1
+	Expr1 = Expr1 andOp Expr2
+	| Expr2
+	Expr2 = notOp Expr3
+	| Expr3
+	Expr3 = Expr4 relOp Expr4
+	| Expr4
+	Expr4 = Expr5 colonOp Expr4
+	| Expr5
+	Expr5 = Expr5 plusOp Expr6
+	| Expr6 
+	Expr6 = Expr6 mulOp Expr7
+	| Expr7
+	Expr7 = asOp Expr8
+	| Expr8
+	Expr8 = Expr9 arrowOp Expr8
+	| Expr9
+	Expr9 = boolTerm
+	| intTerm
+	| Identifier
+	| ParenExpr
+    ParenExpr = "(" Expr ")"
+	orOp = "or"
+	andOp = "and"
+	notOp = "not" | "-"
+	relOp = "<>" | "==" | "<" | ">" | "<="| ">="
+	colonOp = "::"
+	plusOp = "+" | "-"
+	mulOp = "*" | "/" | "%"
+	asOp = "assert" | "assume"
+	arrowOp = "->"
+	boolTerm = "true" | "false"
+	intTerm = digit+
+	Identifier = ident_start ident_cont*
+	ident_start = letter | "_"
+	ident_cont = letter | "_" | digit
+}

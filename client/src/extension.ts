@@ -17,7 +17,34 @@ import {
 
 import * as ohm from 'ohm-js';
 
+import {readFileSync} from 'fs';
+
+import assert = require('assert');
+
 let client: LanguageClient;
+
+
+const ohmGrammar = ohm.grammar(readFileSync(path.normalize('./workingGrammar.ohm'), 'utf-8'));
+const semanticOps = ohmGrammar.createSemantics();
+let semanticTokensList = [];
+
+interface IParsedToken {
+	line: number;
+	startCharacter: number;
+	length: number;
+	tokenType: string;
+	tokenModifiers: string[];
+}
+
+semanticOps.addOperation<void>('parse()', {
+	_nonterminal(x) {
+		semanticTokensList.push({line: x.source.getLineAndColumn().lineNum, 
+								startCharacter: x.source.getLineAndColumn().colNum,
+								length: x.sourceString.length,
+								tokenType: "keyword",
+								tokenModifiers: []});
+	}
+});
 
 
 const tokenTypesMap = new Map<string, number>();
@@ -123,13 +150,6 @@ export function deactivate(): Thenable<void> | undefined {
 	return client.stop();
 }
 
-interface IParsedToken {
-	line: number;
-	startCharacter: number;
-	length: number;
-	tokenType: string;
-	tokenModifiers: string[];
-}
 
 class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 	async provideDocumentSemanticTokens(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.SemanticTokens> {
@@ -167,51 +187,56 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 
 	private _parseText(text: string): IParsedToken[] {
 		const r: IParsedToken[] = [];
-		const lines = text.split(/\r\n|\r|\n/);
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			let currentOffset = 0;
-			do {
-				let pattern = /\b(let|match|rec)\b/g;
-				const match = pattern.exec(line.substring(currentOffset));
-				if (!match) {
-					break;
-				}
-				/*
-				const closeOffset = line.indexOf(' ', openOffset);
-				if (closeOffset === -1) {
-					break;
-				}*/
-				const tokenData = this._parseTextToken(line.substring(match.index, match.index + match[0].length));
-				r.push({
-					line: i,
-					startCharacter: match.index + currentOffset,
-					length: match[0].length,
-					tokenType: tokenData.tokenType,
-					tokenModifiers: tokenData.tokenModifiers
-				});
-				currentOffset += match.index + match[0].length;
-				/*
-				const openOffset = line.indexOf('[', currentOffset);
-				if (openOffset === -1) {
-					break;
-				}
-				const closeOffset = line.indexOf(']', openOffset);
-				if (closeOffset === -1) {
-					break;
-				}
-				const tokenData = this._parseTextToken(line.substring(openOffset + 1, closeOffset));
-				r.push({
-					line: i,
-					startCharacter: openOffset + 1,
-					length: closeOffset - openOffset - 1,
-					tokenType: tokenData.tokenType,
-					tokenModifiers: tokenData.tokenModifiers
-				});
-				currentOffset = closeOffset;*/
-			} while (true);
-		}
+		semanticTokensList = [];
+		const match = ohmGrammar.match(text);
+		semanticOps(match).parse();
+		semanticTokensList.forEach(function(item) {r.push(item)});
 		return r;
+		// const lines = text.split(/\r\n|\r|\n/);
+		// for (let i = 0; i < lines.length; i++) {
+		// 	const line = lines[i];
+		// 	let currentOffset = 0;
+		// 	do {
+		// 		let pattern = /\b(let|match|rec)\b/g;
+		// 		const match = pattern.exec(line.substring(currentOffset));
+		// 		if (!match) {
+		// 			break;
+		// 		}
+		// 		/*
+		// 		const closeOffset = line.indexOf(' ', openOffset);
+		// 		if (closeOffset === -1) {
+		// 			break;
+		// 		}*/
+		// 		const tokenData = this._parseTextToken(line.substring(match.index, match.index + match[0].length));
+		// 		r.push({
+		// 			line: i,
+		// 			startCharacter: match.index + currentOffset,
+		// 			length: match[0].length,
+		// 			tokenType: tokenData.tokenType,
+		// 			tokenModifiers: tokenData.tokenModifiers
+		// 		});
+		// 		currentOffset += match.index + match[0].length;
+		// 		/*
+		// 		const openOffset = line.indexOf('[', currentOffset);
+		// 		if (openOffset === -1) {
+		// 			break;
+		// 		}
+		// 		const closeOffset = line.indexOf(']', openOffset);
+		// 		if (closeOffset === -1) {
+		// 			break;
+		// 		}
+		// 		const tokenData = this._parseTextToken(line.substring(openOffset + 1, closeOffset));
+		// 		r.push({
+		// 			line: i,
+		// 			startCharacter: openOffset + 1,
+		// 			length: closeOffset - openOffset - 1,
+		// 			tokenType: tokenData.tokenType,
+		// 			tokenModifiers: tokenData.tokenModifiers
+		// 		});
+		// 		currentOffset = closeOffset;*/
+		// 	} while (true);
+		// }
+		// return r;
 	}
 
 	private _parseTextToken(text: string): { tokenType: string; tokenModifiers: string[]; } {
