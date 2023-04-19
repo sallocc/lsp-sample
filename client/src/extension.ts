@@ -17,15 +17,15 @@ import {
 
 import * as ohm from 'ohm-js';
 
+import grammar, {JaySemantics} from '../src/grammar.ohm-bundle.js';
+
 import {readFileSync} from 'fs';
 
 import assert = require('assert');
 
 let client: LanguageClient;
 
-
-const ohmGrammar = ohm.grammar(readFileSync(path.normalize('./workingGrammar.ohm'), 'utf-8'));
-const semanticOps = ohmGrammar.createSemantics();
+const semanticOps: JaySemantics = grammar.createSemantics();
 let semanticTokensList = [];
 
 interface IParsedToken {
@@ -37,10 +37,10 @@ interface IParsedToken {
 }
 
 semanticOps.addOperation<void>('parse()', {
-	_nonterminal(x) {
-		semanticTokensList.push({line: x.source.getLineAndColumn().lineNum, 
-								startCharacter: x.source.getLineAndColumn().colNum,
-								length: x.sourceString.length,
+	_terminal() {
+		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum, 
+								startCharacter: this.source.getLineAndColumn().colNum,
+								length: this.source.contents.length,
 								tokenType: "keyword",
 								tokenModifiers: []});
 	}
@@ -188,7 +188,7 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 	private _parseText(text: string): IParsedToken[] {
 		const r: IParsedToken[] = [];
 		semanticTokensList = [];
-		const match = ohmGrammar.match(text);
+		const match = grammar.match(text);
 		semanticOps(match).parse();
 		semanticTokensList.forEach(function(item) {r.push(item)});
 		return r;

@@ -1,79 +1,41 @@
 Jay {
 	Prog = Expr end
 	| "" end
-
-	Expr = Appl_Expr "" "" "" "" ""
-	| Variant_label Expr  "" "" "" ""
-  | Expr "*" Expr "" "" ""
-  | Expr "\\" Expr "" "" ""
-  | Expr "%" Expr "" "" ""
-  | Expr "+" Expr "" "" ""
-  | Expr "-" Expr "" "" ""
-  | Expr "::" Expr "" "" ""
-  | Expr "==" Expr "" "" ""
-  | Expr "<>" Expr "" "" ""
-  | Expr ">" Expr "" "" ""
-  | Expr ">=" Expr "" "" ""
-  | Expr "<" Expr "" "" ""
-  | Expr "<=" Expr "" "" ""
-  | "not" Expr "" "" "" ""
-  | Expr "and" Expr "" "" ""
-  | Expr "or" Expr "" "" ""
-  | "if" Expr "then" Expr "else" Expr 
-  | Function Param_list "->" Expr "" ""  
-  | "let" "rec" Fun_sig_list "in" Expr ""
-  | "let" Ident_decl "=" Expr "in" Expr 
-  | "let" Fun_sig "in" Expr  "" ""
-  | "match" Expr "with" "|"? Match_expr_list End
-    
-	Function = "fun"
-	| "function"
-  
-	End = "end"
-	Appl_Expr = Appl_Expr Primary_expr
-	| Primary_expr ""
-  
-	Fun_sig = Ident_decl Param_list "=" Expr
-	Fun_sig_list = Fun_sig "" ""
-	| Fun_sig "with" Fun_sig_list
-	Primary_expr = digit+ "" ""
-	| "true" "" ""
-	| "false" "" ""
-	| Ident_usage	"" ""
-	| "{" Record_body "}"
-	| "{" "}" ""
-	| "[" List_body "]"
-	| "[" "]" ""
-	| "(" Expr ")"
-	| Primary_expr "." Label 
-	Param_list = Ident_decl Param_list
-	| Ident_decl ""
-	Label = Identifier
-	Ident_usage = Ident_decl
-	Ident_decl = Identifier
-	Record_body = Label "=" Expr "" ""
-	| Label "=" Expr "," Record_body
-	List_body = Expr "," List_body
-	| Expr "" ""
-	Variant_label = "`" Identifier
-	Match_expr_list = Match_expr "|" Match_expr_list
-	| Match_expr "" ""
-	Match_expr = Pattern "->" Expr
-	Pattern = "_" "" "" ""
-	| digit+ "" "" ""
-	| "bool" "" "" ""
-	| Function "" "" ""
-	| Identifier "" "" ""
-	| Variant_label Ident_decl "" ""
-	| Variant_label "(" Ident_decl ")"
-	| "{" "_" "}" ""
-	| "{" "}" "" "" 
-	| "[" "]" "" ""
-	| Ident_decl "::" Ident_decl ""
-	| "(" Pattern ")" ""
+	Expr = Expr orOp Expr1
+	| Expr1 "" ""
+	Expr1 = Expr1 andOp Expr2
+	| Expr2 "" ""
+ 	Expr2 = notOp Expr3
+	| Expr3 "" 
+	Expr3 = Expr4 relOp Expr4
+	| Expr4 "" ""
+	Expr4 = Expr5 colonOp Expr4
+	| Expr5 "" ""
+	Expr5 = Expr5 plusOp Expr6
+	| Expr6  "" ""
+	Expr6 = Expr6 mulOp Expr7
+	| Expr7 "" ""
+	Expr7 = asOp Expr8
+	| Expr8 ""
+	Expr8 = Expr9 arrowOp Expr8
+	| Expr9 "" ""
+	Expr9 = boolTerm
+	| intTerm
+	| Identifier
+	| ParenExpr
+    ParenExpr = "(" Expr ")"
+	orOp = "or"
+	andOp = "and"
+	notOp = "not" | "-"
+	relOp = "<>" | "==" | "<" | ">" | "<="| ">="
+	colonOp = "::"
+	plusOp = "+" | "-"
+	mulOp = "*" | "/" | "%"
+	asOp = "assert" | "assume"
+	arrowOp = "->"
+	boolTerm = "true" | "false"
+	intTerm = digit+
 	Identifier = ident_start ident_cont*
-	ident_start = letter | "_" 
-	ident_cont = letter | digit | "_"
-	Record_pattern_element = Label "=" Ident_decl
-
+	ident_start = letter | "_"
+	ident_cont = letter | "_" | digit
 }
