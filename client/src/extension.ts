@@ -17,16 +17,57 @@ import {
 
 import * as ohm from 'ohm-js';
 
-import grammar, {JaySemantics} from '../src/grammar.ohm-bundle.js';
+import grammar_ohm_bundle_js_1, {JaySemantics} from './grammar.ohm-bundle.js';
 
-import {readFileSync} from 'fs';
+//import {readFileSync, readFile} from 'fs';
 
 import assert = require('assert');
 
 let client: LanguageClient;
 
-const semanticOps: JaySemantics = grammar.createSemantics();
-let semanticTokensList = [];
+const fileGrammar = ohm.grammar("Jay \{\n"+
+	"Prog = Expr end\n" + 
+	"| \"\" end\n" +
+	"Expr = Expr orOp Expr1\n" +
+	"| Expr1 \"\" \"\"\n" +
+	"Expr1 = Expr1 andOp Expr2\n" +
+	"| Expr2 \"\" \"\"\n" +
+ 	"Expr2 = notOp Expr3\n" +
+	"| Expr3 \"\" \n" +
+	"Expr3 = Expr4 relOp Expr4\n" +
+	"| Expr4 \"\" \"\"\n" +
+	"Expr4 = Expr5 colonOp Expr4\n" +
+	"| Expr5 \"\" \"\"\n" +
+	"Expr5 = Expr5 plusOp Expr6\n" +
+	"| Expr6  \"\" \"\"\n" +
+	"Expr6 = Expr6 mulOp Expr7\n" +
+	"| Expr7 \"\" \"\"\n" +
+	"Expr7 = asOp Expr8\n" +
+	"| Expr8 \"\"\n" +
+	"Expr8 = Expr9 arrowOp Expr8\n" +
+	"| Expr9 \"\" \"\"\n" +
+	"Expr9 = boolTerm\n" +
+	"| intTerm\n" +
+	"| Identifier\n" +
+	"| ParenExpr\n" +
+    "ParenExpr = \"(\" Expr \")\"\n" +
+	"orOp = \"or\"\n" +
+	"andOp = \"and\"\n" +
+	"notOp = \"not\" | \"-\"\n" +
+	"relOp = \"<>\" | \"==\" | \"<\" | \">\" | \"<=\"| \">=\"\n" +
+	"colonOp = \"::\"\n" +
+	"plusOp = \"+\" | \"-\"\n" +
+	"mulOp = \"*\" | \"/\" | \"%\"\n" +
+	"asOp = \"assert\" | \"assume\"\n" +
+	"arrowOp = \"->\"\n" +
+	"boolTerm = \"true\" | \"false\"\n" +
+	"intTerm = digit+\n" +
+	"Identifier = ident_start ident_cont*\n" +
+	"ident_start = letter | \"_\"\n" +
+	"ident_cont = letter | \"_\" | digit\n" +
+"}");
+const semanticOps = fileGrammar.createSemantics();
+let semanticTokensList: IParsedToken[] = [];
 
 interface IParsedToken {
 	line: number;
@@ -36,15 +77,15 @@ interface IParsedToken {
 	tokenModifiers: string[];
 }
 
-semanticOps.addOperation<void>('parse()', {
-	_terminal() {
-		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum, 
-								startCharacter: this.source.getLineAndColumn().colNum,
-								length: this.source.contents.length,
-								tokenType: "keyword",
-								tokenModifiers: []});
-	}
-});
+// semanticOps.addOperation<void>('parse()', {
+// 	_terminal() {
+// 		return {line: this.source.getLineAndColumn().lineNum, 
+// 								startCharacter: this.source.getLineAndColumn().colNum,
+// 								length: this.sourceString.length,
+// 								tokenType: "keyword",
+// 								tokenModifiers: []};
+// 	}
+// });
 
 
 const tokenTypesMap = new Map<string, number>();
@@ -136,7 +177,7 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
-	context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "jay"}, new DocumentSemanticTokensProvider(), computeLegend()));
+	//context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "jay"}, new DocumentSemanticTokensProvider(), computeLegend()));
 	//context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "plaintext"}, new DocumentSemanticTokensProvider, semanticTokensLegend));
 
 	// Start the client. This will also launch the server
@@ -188,9 +229,9 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 	private _parseText(text: string): IParsedToken[] {
 		const r: IParsedToken[] = [];
 		semanticTokensList = [];
-		const match = grammar.match(text);
-		semanticOps(match).parse();
-		semanticTokensList.forEach(function(item) {r.push(item)});
+		const match = fileGrammar.match(text);
+		//semanticTokensList = semanticOps(match).parse();
+		//semanticTokensList.forEach(function(item) {r.push(item)});
 		return r;
 		// const lines = text.split(/\r\n|\r|\n/);
 		// for (let i = 0; i < lines.length; i++) {

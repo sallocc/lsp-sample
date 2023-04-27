@@ -5,8 +5,9 @@
 		"lib": ["es2020"],
 		"outDir": "out",
 		"rootDir": "src",
-		"sourceMap": true
+		"sourceMap": true,
+		"allowJs": true
 	},
-	"include": ["src"],
+	"include": ["src", "src/*.ohm", "src/*.js", "src/*.ohm-bundle.js"],
 	"exclude": ["node_modules", ".vscode-test"]
 }
