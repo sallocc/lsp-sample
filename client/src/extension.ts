@@ -17,7 +17,7 @@ import {
 
 import * as ohm from 'ohm-js';
 
-import grammar_ohm_bundle_js_1, {JaySemantics} from './grammar.ohm-bundle.js';
+import grammar, {JaySemantics} from './grammar.ohm-bundle.js';
 
 //import {readFileSync, readFile} from 'fs';
 
