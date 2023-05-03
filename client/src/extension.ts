@@ -25,14 +25,14 @@ import assert = require('assert');
 
 let client: LanguageClient;
 
-const fileGrammar = ohm.grammar("Jay \{\n"+
+const fileGrammar = ohm.grammar("Jay {\n"+
 	"Prog = Expr end\n" + 
 	"| \"\" end\n" +
 	"Expr = Expr orOp Expr1\n" +
 	"| Expr1 \"\" \"\"\n" +
 	"Expr1 = Expr1 andOp Expr2\n" +
 	"| Expr2 \"\" \"\"\n" +
- 	"Expr2 = notOp Expr3\n" +
+	"Expr2 = notOp Expr3\n" +
 	"| Expr3 \"\" \n" +
 	"Expr3 = Expr4 relOp Expr4\n" +
 	"| Expr4 \"\" \"\"\n" +
@@ -128,7 +128,7 @@ function computeLegend(): SemanticTokensLegend {
 	for (let i = 0; i < TokenTypes._; i++) {
 		const str = TokenTypes[i];
 		tokenTypes.push(str);
-		tokenTypesMap.set(str, i)
+		tokenTypesMap.set(str, i);
 		
 	}
 
