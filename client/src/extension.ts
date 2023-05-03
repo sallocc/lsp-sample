@@ -294,7 +294,22 @@ semanticOps.addOperation<void>('parse()', {
 		if (x.sourceString.length > 0) x.parse();
 	},
 	ParenExpr(x, y, z) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: z.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: z.source.getLineAndColumn().colNum - 1,
+			length: z.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
 		if (y.sourceString.length > 0) y.parse();
+		
 	},
 	ListExpr(x, y, z, w) {
 		semanticTokensList.push({
