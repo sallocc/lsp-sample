@@ -5,12 +5,17 @@ Jay {
 	| Expr1 "" ""
 	Expr1 = Expr1 andOp Expr2
 	| Expr2 "" ""
- 	Expr2 = notOp Expr3
+	Expr2 = notOp Expr3
 	| Expr3 "" 
 	Expr3 = Expr4 relOp Expr4
 	| Expr4 "" ""
 	Expr4 = Expr5 colonOp Expr4
-	| Expr5 "" ""
+	| MatchExpr  "" ""
+	MatchExpr = "match" Expr "with" "|"? MatchExprList "end"
+    | Expr5 "" "" "" "" ""
+	MatchExprList = MatchExprInner "|" MatchExprList
+	| MatchExprInner "" "" 
+	MatchExprInner = Expr9 arrowOp Expr
 	Expr5 = Expr5 plusOp Expr6
 	| Expr6  "" ""
 	Expr6 = Expr6 mulOp Expr7
@@ -20,11 +25,25 @@ Jay {
 	Expr8 = Expr9 arrowOp Expr8
 	| Expr9 "" ""
 	Expr9 = boolTerm
+	| commentExpr
+	| ListDestructExpr
 	| intTerm
-	| Identifier
+	| identifier
 	| ParenExpr
+	| funOp
+	| ListExpr
+	commentExpr = "#" ~("\n")
+	ListExpr = "{" NonemptyListOf<RecordPatternEl, ","> "_" "}"
+	| "{" NonemptyListOf<RecordPatternEl, ","> "" "}"
+	| "{" "" "_" "}" 
+	| "{" "" "" "}" 
+	| "[" "" "" "]" 
+	ListDestructExpr = identifier colonOp identifier
+	RecordPatternEl = identifier equalsOp identifier 
     ParenExpr = "(" Expr ")"
+	funOp = "fun" | "function"
 	orOp = "or"
+	equalsOp = "="
 	andOp = "and"
 	notOp = "not" | "-"
 	relOp = "<>" | "==" | "<" | ">" | "<="| ">="
@@ -35,7 +54,7 @@ Jay {
 	arrowOp = "->"
 	boolTerm = "true" | "false"
 	intTerm = digit+
-	Identifier = ident_start ident_cont*
-	ident_start = letter | "_"
+	identifier = (letter|"_") (letter | "_" | digit)*
+	dent_start = letter | "_"
 	ident_cont = letter | "_" | digit
 }

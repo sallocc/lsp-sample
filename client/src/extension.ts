@@ -29,6 +29,7 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"Prog = Expr end\n" + 
 	"| \"\" end\n" +
 	"Expr = Expr orOp Expr1\n" +
+	"| commentExpr \"\" \"\" \n" +
 	"| Expr1 \"\" \"\"\n" +
 	"Expr1 = Expr1 andOp Expr2\n" +
 	"| Expr2 \"\" \"\"\n" +
@@ -37,7 +38,12 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"Expr3 = Expr4 relOp Expr4\n" +
 	"| Expr4 \"\" \"\"\n" +
 	"Expr4 = Expr5 colonOp Expr4\n" +
-	"| Expr5 \"\" \"\"\n" +
+	"| MatchExpr \"\" \"\"\n" +
+	"MatchExpr = \"match\" Expr \"with\" \"|\"? MatchExprList \"end\"\n" +
+	"| Expr5 \"\" \"\" \"\" \"\" \"\" \n" +
+	"MatchExprList = MatchExprInner \"|\" MatchExprList\n" +
+	"| MatchExprInner \"\" \"\" \n" + 
+	"MatchExprInner = Expr9 arrowOp Expr\n" +
 	"Expr5 = Expr5 plusOp Expr6\n" +
 	"| Expr6  \"\" \"\"\n" +
 	"Expr6 = Expr6 mulOp Expr7\n" +
@@ -48,10 +54,23 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"| Expr9 \"\" \"\"\n" +
 	"Expr9 = boolTerm\n" +
 	"| intTerm\n" +
-	"| Identifier\n" +
+	"| ListDestructExpr\n" +
+	"| identifier\n" +
 	"| ParenExpr\n" +
+	"| funOp\n" +
+	"| ListExpr\n" + 
+	"commentExpr = \"#\" (~\"\\n\" any)* \"\\n\"\n" +
+	"ListExpr = \"{\" NonemptyListOf<RecordPatternEl, \",\"> \"_\" \"}\"\n" +
+	"| \"{\" NonemptyListOf<RecordPatternEl, \",\"> \"\" \"}\"\n" +
+	"| \"{\" \"\" \"_\" \"}\" \n" +
+	"| \"{\" \"\" \"\" \"}\" \n" +
+	"| \"[\" \"\" \"\" \"]\" \n" +
+	"ListDestructExpr = identifier colonOp identifier\n" +
+	"RecordPatternEl = identifier equalsOp identifier \n" + 
     "ParenExpr = \"(\" Expr \")\"\n" +
+	"funOp = \"fun\" | \"function\"\n" +
 	"orOp = \"or\"\n" +
+	"equalsOp = \"=\"\n" +
 	"andOp = \"and\"\n" +
 	"notOp = \"not\" | \"-\"\n" +
 	"relOp = \"<>\" | \"==\" | \"<\" | \">\" | \"<=\"| \">=\"\n" +
@@ -62,9 +81,10 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"arrowOp = \"->\"\n" +
 	"boolTerm = \"true\" | \"false\"\n" +
 	"intTerm = digit+\n" +
-	"Identifier = ident_start ident_cont*\n" +
+	"identifier = (letter|\"_\") (letter | \"_\" | digit)*\n" +
 	"ident_start = letter | \"_\"\n" +
 	"ident_cont = letter | \"_\" | digit\n" +
+	"space += commentExpr\n" +
 "}");
 const semanticOps = fileGrammar.createSemantics();
 let semanticTokensList: IParsedToken[] = [];
@@ -77,15 +97,286 @@ interface IParsedToken {
 	tokenModifiers: string[];
 }
 
-// semanticOps.addOperation<void>('parse()', {
-// 	_terminal() {
-// 		return {line: this.source.getLineAndColumn().lineNum, 
-// 								startCharacter: this.source.getLineAndColumn().colNum,
-// 								length: this.sourceString.length,
-// 								tokenType: "keyword",
-// 								tokenModifiers: []};
-// 	}
-// });
+semanticOps.addOperation<void>('parse()', {
+	Prog(x, y) {
+		if (x.sourceString.length > 0) x.parse();
+	},
+	//Or Expression
+	Expr(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//And Expression
+	Expr1(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//Not Expression
+	Expr2(x, y) {
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: x.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x.source.getLineAndColumn().colNum - 1,
+				length: x.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			y.parse();
+		}
+		else x.parse();
+	},
+	//Relational expression
+	Expr3(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//Colon Expression
+	Expr4(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	MatchExpr(x, y, z, w, t, f) {
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: x.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x.source.getLineAndColumn().colNum - 1,
+				length: x.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			semanticTokensList.push({
+				line: z.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: z.source.getLineAndColumn().colNum - 1,
+				length: z.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			semanticTokensList.push({
+				line: f.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: f.source.getLineAndColumn().colNum - 1,
+				length: f.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			if (w.sourceString.length > 0) {
+				semanticTokensList.push({
+					line: w.source.getLineAndColumn().lineNum - 1, 
+					startCharacter: w.source.getLineAndColumn().colNum - 1,
+					length: w.sourceString.length,
+					tokenType: "parameter",
+					tokenModifiers: []
+				});
+			}
+			y.parse();
+			t.parse();
+		}
+		else x.parse();
+
+	},
+	MatchExprList(x, y, z) {
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "parameter",
+				tokenModifiers: []
+			});
+			x.parse();
+			z.parse();
+		} else x.parse();
+	},
+	MatchExprInner(x, y, z) {
+		x.parse();
+		z.parse();
+		semanticTokensList.push({
+			line: y.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: y.source.getLineAndColumn().colNum - 1,
+			length: y.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+	},
+	//Plus Expression
+	Expr5(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//Multiply expression
+	Expr6(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//Assert/assume Expression
+	Expr7(x, y) {
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: x.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x.source.getLineAndColumn().colNum - 1,
+				length: x.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			y.parse();
+		}
+		else x.parse();
+	},
+	//Arrow Expression
+	Expr8(x, y, z) {
+		if (x.sourceString.length > 0) x.parse();
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+		}
+		if (z.sourceString.length > 0) z.parse();
+	},
+	//Variable Expression
+	Expr9(x) {
+		if (x.sourceString.length > 0) x.parse();
+	},
+	ParenExpr(x, y, z) {
+		if (y.sourceString.length > 0) y.parse();
+	},
+	ListExpr(x, y, z, w) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: w.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: w.source.getLineAndColumn().colNum - 1,
+			length: w.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		if (y.sourceString.length > 0) {
+			y.asIteration().children.map(c => c.parse());
+		} 
+		if (z.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: z.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: z.source.getLineAndColumn().colNum - 1,
+				length: z.sourceString.length,
+				tokenType: "variable",
+				tokenModifiers: []
+			});
+		}
+	},
+	ListDestructExpr(x, y, z) {
+		x.parse();
+		z.parse();
+		semanticTokensList.push({
+			line: y.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: y.source.getLineAndColumn().colNum - 1,
+			length: y.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+	},
+	RecordPatternEl(x, y, z) {
+		x.parse();
+		z.parse();
+		semanticTokensList.push({
+			line: y.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: y.source.getLineAndColumn().colNum - 1,
+			length: y.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+	},
+	identifier(x, y) {
+		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "variable",
+			tokenModifiers: []});
+	},
+	intTerm(digits) {
+		semanticTokensList.push({
+			line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "number",
+			tokenModifiers: []
+		});
+	},
+	commentExpr(x, y, z) {
+		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "comment",
+			tokenModifiers: []});
+	},
+	_terminal() {
+		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "variable",
+			tokenModifiers: []});
+	}
+});
 
 
 const tokenTypesMap = new Map<string, number>();
@@ -177,7 +468,7 @@ export function activate(context: ExtensionContext) {
 		clientOptions
 	);
 
-	//context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "jay"}, new DocumentSemanticTokensProvider(), computeLegend()));
+	context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "jay"}, new DocumentSemanticTokensProvider(), computeLegend()));
 	//context.subscriptions.push(languages.registerDocumentSemanticTokensProvider({language: "plaintext"}, new DocumentSemanticTokensProvider, semanticTokensLegend));
 
 	// Start the client. This will also launch the server
@@ -230,8 +521,12 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 		const r: IParsedToken[] = [];
 		semanticTokensList = [];
 		const match = fileGrammar.match(text);
-		//semanticTokensList = semanticOps(match).parse();
-		//semanticTokensList.forEach(function(item) {r.push(item)});
+		try {
+			const parseReturn = semanticOps(match).parse();
+		} catch (exception: any) {
+			console.log("Unable to parse current text");
+		}
+		semanticTokensList.forEach(function(item) {r.push(item);});
 		return r;
 		// const lines = text.split(/\r\n|\r|\n/);
 		// for (let i = 0; i < lines.length; i++) {
