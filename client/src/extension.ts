@@ -44,6 +44,7 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"MatchExprList = MatchExprInner \"|\" MatchExprList\n" +
 	"| MatchExprInner \"\" \"\" \n" + 
 	"MatchExprInner = Expr9 arrowOp Expr\n" +
+	"IfExpr = \"if\" Expr \"then\" Expr \"else\" Expr\n" +
 	"Expr5 = Expr5 plusOp Expr6\n" +
 	"| Expr6  \"\" \"\"\n" +
 	"Expr6 = Expr6 mulOp Expr7\n" +
@@ -54,11 +55,27 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"| Expr9 \"\" \"\"\n" +
 	"Expr9 = boolTerm\n" +
 	"| intTerm\n" +
+	"| IfExpr\n" +
+	"| FunExpr\n" +
+    "| LetExpr\n" +
 	"| ListDestructExpr\n" +
 	"| identifier\n" +
 	"| ParenExpr\n" +
 	"| funOp\n" +
 	"| ListExpr\n" + 
+	"| Appl_Expr\n" +
+    "| VarientExpr\n" +
+    "VarientExpr =  Varient_Label Expr\n" +
+    "Varient_Label = \"`\" identifier\n" +
+	"FunExpr = funOp Param_List arrowOp Expr \"\" \n" +
+    "| \"let\" \"rec\" Fun_Sig_List \"in\" Expr  \n" +
+    "| \"let\" Fun_Sig \"in\" Expr \"\" \n" +
+    "LetExpr =  \"let\" identifier equalsOp Expr \"in\" Expr\n" +
+    "Fun_Sig_List = Fun_Sig \"with\" Fun_Sig_List\n" +
+    "| Fun_Sig \"\" \"\" \n" +
+    "Fun_Sig = identifier Param_List equalsOp Expr \n" +
+    "Param_List = identifier Param_List \n" +
+    "| identifier \"\" \n" +
 	"commentExpr = \"#\" (~\"\\n\" any)* \"\\n\"\n" +
 	"ListExpr = \"{\" NonemptyListOf<RecordPatternEl, \",\"> \"_\" \"}\"\n" +
 	"| \"{\" NonemptyListOf<RecordPatternEl, \",\"> \"\" \"}\"\n" +
@@ -67,6 +84,26 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"| \"[\" \"\" \"\" \"]\" \n" +
 	"ListDestructExpr = identifier colonOp identifier\n" +
 	"RecordPatternEl = identifier equalsOp identifier \n" + 
+	"Appl_Expr = Prim_Expr \"\" \n" +
+	"| Appl_Expr Prim_Expr\n" +
+    "Prim_Expr = intTerm \n" +
+    "| boolTerm \n" +
+    "| inputTerm \n" +
+    "| identifier \n" +
+    "| Record \n" +
+    "| Empty_Record \n" +
+    "| List \n" +
+    "| Empty_List \n" +
+    "| ParenExpr \n" +
+    "| Record_Proj \n" +
+    "Record_Proj = Prim_Expr \".\" identifier \n" +
+    "Empty_List = \"[\" \"]\" \n" +
+    "List = \"[\" NonemptyListOf<Expr, \",\"> \"]\" \n" +
+    "Empty_Record = \"{\" \"}\" \n" +
+    "Record = \"{\" Record_Body \"}\" \n" +
+    "Record_Body = identifier equalsOp Expr \",\" Record_Body\n" +
+    "| identifier equalsOp Expr \"\" \"\" \n" +
+	"inputTerm = \"input\" \n" +
     "ParenExpr = \"(\" Expr \")\"\n" +
 	"funOp = \"fun\" | \"function\"\n" +
 	"orOp = \"or\"\n" +
@@ -361,6 +398,254 @@ semanticOps.addOperation<void>('parse()', {
 			tokenModifiers: []
 		});
 	},
+	IfExpr(x1, x2, x3, x4, x5, x6) {
+		if (x2.sourceString.length > 0) {
+			semanticTokensList.push({line: x1.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x1.source.getLineAndColumn().colNum - 1,
+				length: x1.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []});
+			semanticTokensList.push({line: x3.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x3.source.getLineAndColumn().colNum - 1,
+				length: x3.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []});
+			semanticTokensList.push({line: x5.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x5.source.getLineAndColumn().colNum - 1,
+				length: x5.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []});
+			x2.parse();
+			x4.parse();
+			x6.parse();
+			} else {
+				x1.parse();
+			}
+	},
+	Appl_Expr(x, y) {
+		x.parse();
+		if (y.sourceString.length > 0) {
+			y.parse();
+		} 
+	},
+	Prim_Expr(x) {
+		x.parse();
+	},
+	Record(x, y, z) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: z.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: z.source.getLineAndColumn().colNum - 1,
+			length: z.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		y.parse();
+	},
+	Record_Body(x1, x2, x3, x4, x5) {
+		if (x4.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: x4.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x4.source.getLineAndColumn().colNum - 1,
+				length: x4.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+			x5.parse();
+		}
+		semanticTokensList.push({
+			line: x2.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x2.source.getLineAndColumn().colNum - 1,
+			length: x2.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		x1.parse();
+		x3.parse();
+	},
+	Empty_Record(x, y) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: y.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: y.source.getLineAndColumn().colNum - 1,
+			length: y.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+	},
+	List(x, y, z) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: z.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: z.source.getLineAndColumn().colNum - 1,
+			length: z.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		y.parse();
+	},
+	Empty_List(x, y) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: y.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: y.source.getLineAndColumn().colNum - 1,
+			length: y.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+	},
+	Record_Proj(x, y, z) {
+		x.parse();
+		z.parse();
+	},
+	FunExpr(x1, x2, x3, x4, x5) {
+		semanticTokensList.push({
+			line: x1.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x1.source.getLineAndColumn().colNum - 1,
+			length: x1.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		if (x5.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: x2.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x2.source.getLineAndColumn().colNum - 1,
+				length: x2.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			semanticTokensList.push({
+				line: x4.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x4.source.getLineAndColumn().colNum - 1,
+				length: x4.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			x3.parse();
+			x5.parse();
+		} else if (x1.sourceString === "let") {
+			semanticTokensList.push({
+				line: x3.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x3.source.getLineAndColumn().colNum - 1,
+				length: x3.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			x2.parse();
+			x4.parse();
+		} else {
+			semanticTokensList.push({
+				line: x3.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: x3.source.getLineAndColumn().colNum - 1,
+				length: x3.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+			x2.parse();
+			x4.parse();
+		}
+
+	},
+	LetExpr(x1, x2, x3, x4, x5, x6) {
+		semanticTokensList.push({
+			line: x1.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x1.source.getLineAndColumn().colNum - 1,
+			length: x1.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: x3.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x3.source.getLineAndColumn().colNum - 1,
+			length: x3.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: x5.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x5.source.getLineAndColumn().colNum - 1,
+			length: x5.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		x2.parse();
+		x4.parse();
+		x6.parse();
+	},
+	VarientExpr(x, y) {
+		x.parse();
+		y.parse();
+	},
+	Varient_Label(x, y) {
+		semanticTokensList.push({
+			line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "variable",
+			tokenModifiers: []
+		});
+	},
+	Fun_Sig_List(x, y, z) {
+		if (y.sourceString.length > 0) {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "keyword",
+				tokenModifiers: []
+			});
+			x.parse();
+			z.parse();
+		} else x.parse();
+	},
+	Fun_Sig(x1, x2, x3, x4) {
+		semanticTokensList.push({
+			line: x1.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x1.source.getLineAndColumn().colNum - 1,
+			length: x1.sourceString.length,
+			tokenType: "function",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: x3.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x3.source.getLineAndColumn().colNum - 1,
+			length: x3.sourceString.length,
+			tokenType: "member",
+			tokenModifiers: []
+		});
+		x2.parse();
+		x4.parse();
+	},
+	Param_List(x, y) {
+		x.parse();
+		if (y.sourceString.length > 0) {
+			y.parse();
+		}
+	},
 	identifier(x, y) {
 		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum - 1, 
 			startCharacter: this.source.getLineAndColumn().colNum - 1,
@@ -383,6 +668,24 @@ semanticOps.addOperation<void>('parse()', {
 			length: this.sourceString.length,
 			tokenType: "comment",
 			tokenModifiers: []});
+	},
+	boolTerm(x) {
+		semanticTokensList.push({
+			line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+	},
+	inputTerm(x) {
+		semanticTokensList.push({
+			line: this.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: this.source.getLineAndColumn().colNum - 1,
+			length: this.sourceString.length,
+			tokenType: "number",
+			tokenModifiers: []
+		});
 	},
 	_terminal() {
 		semanticTokensList.push({line: this.source.getLineAndColumn().lineNum - 1, 
@@ -534,12 +837,14 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 
 	private _parseText(text: string): IParsedToken[] {
 		const r: IParsedToken[] = [];
-		semanticTokensList = [];
 		const match = fileGrammar.match(text);
-		try {
-			const parseReturn = semanticOps(match).parse();
-		} catch (exception: any) {
-			console.log("Unable to parse current text");
+		if (match.succeeded) {
+			semanticTokensList = [];
+			try {
+				const parseReturn = semanticOps(match).parse();
+			} catch (exception: any) {
+				console.log("Unable to parse current text");
+			}
 		}
 		semanticTokensList.forEach(function(item) {r.push(item);});
 		return r;

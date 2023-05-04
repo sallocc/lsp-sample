@@ -16,6 +16,7 @@ Jay {
 	MatchExprList = MatchExprInner "|" MatchExprList
 	| MatchExprInner "" "" 
 	MatchExprInner = Expr9 arrowOp Expr
+	IfExpr = "if" Expr "then" Expr "else" Expr
 	Expr5 = Expr5 plusOp Expr6
 	| Expr6  "" ""
 	Expr6 = Expr6 mulOp Expr7
@@ -25,14 +26,29 @@ Jay {
 	Expr8 = Expr9 arrowOp Expr8
 	| Expr9 "" ""
 	Expr9 = boolTerm
-	| commentExpr
 	| ListDestructExpr
+	| IfExpr
+	| FunExpr
+    | LetExpr
 	| intTerm
 	| identifier
 	| ParenExpr
 	| funOp
 	| ListExpr
-	commentExpr = "#" ~("\n")
+    | Appl_Expr 
+    | VarientExpr
+    VarientExpr =  Varient_Label Expr
+    Varient_Label = "`" identifier
+	FunExpr = funOp Param_List arrowOp Expr "" ""
+    | "let" "rec" Fun_Sig_List "in" Expr ""
+    | "let" Fun_Sig "in" Expr "" ""
+    LetExpr =  "let" identifier equalsOp Expr "in" Expr
+    Fun_Sig_List = Fun_Sig "with" Fun_Sig_List
+    | Fun_Sig "" ""  
+    Fun_Sig = identifier Param_List equalsOp Expr
+    Param_List = identifier Param_List
+    | identifier ""
+	commentExpr = "#" ~("\n" any) "\n"
 	ListExpr = "{" NonemptyListOf<RecordPatternEl, ","> "_" "}"
 	| "{" NonemptyListOf<RecordPatternEl, ","> "" "}"
 	| "{" "" "_" "}" 
@@ -40,6 +56,26 @@ Jay {
 	| "[" "" "" "]" 
 	ListDestructExpr = identifier colonOp identifier
 	RecordPatternEl = identifier equalsOp identifier 
+	Appl_Expr = Appl_Expr Prim_Expr
+    | Prim_Expr ""
+    Prim_Expr = intTerm
+    | boolTerm
+    | inputTerm
+    | identifier
+    | Record
+    | Empty_Record
+    | List
+    | Empty_List
+    | ParenExpr
+    | Record_Proj
+    Record_Proj = Prim_Expr "." identifier 
+    Empty_List = "[" "]"
+    List = "[" NonemptyListOf<Expr, ","> "]"
+    Empty_Record = "{" "}"
+    Record = "{" Record_Body "}"
+    Record_Body = identifier equalsOp Expr "," Record_Body
+    | identifier equalsOp Expr "" ""
+	inputTerm = "input"
     ParenExpr = "(" Expr ")"
 	funOp = "fun" | "function"
 	orOp = "or"
@@ -57,4 +93,5 @@ Jay {
 	identifier = (letter|"_") (letter | "_" | digit)*
 	dent_start = letter | "_"
 	ident_cont = letter | "_" | digit
+	space += commentExpr
 }
