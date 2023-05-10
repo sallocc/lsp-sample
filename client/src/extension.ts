@@ -38,35 +38,34 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"Expr3 = Expr4 relOp Expr4\n" +
 	"| Expr4 \"\" \"\"\n" +
 	"Expr4 = Expr5 colonOp Expr4\n" +
-	"| MatchExpr \"\" \"\"\n" +
-	"MatchExpr = \"match\" Expr \"with\" \"|\"? MatchExprList \"end\"\n" +
-	"| Expr5 \"\" \"\" \"\" \"\" \"\" \n" +
-	"MatchExprList = MatchExprInner \"|\" MatchExprList\n" +
-	"| MatchExprInner \"\" \"\" \n" + 
-	"MatchExprInner = Expr9 arrowOp Expr\n" +
-	"IfExpr = \"if\" Expr \"then\" Expr \"else\" Expr\n" +
+	"| Expr5 \"\" \"\"\n" +
 	"Expr5 = Expr5 plusOp Expr6\n" +
 	"| Expr6  \"\" \"\"\n" +
 	"Expr6 = Expr6 mulOp Expr7\n" +
 	"| Expr7 \"\" \"\"\n" +
 	"Expr7 = asOp Expr8\n" +
 	"| Expr8 \"\"\n" +
-	"Expr8 = Expr9 arrowOp Expr8\n" +
-	"| Expr9 \"\" \"\"\n" +
-	"Expr9 = boolTerm\n" +
+	"Expr8 = boolTerm\n" +
 	"| intTerm\n" +
 	"| IfExpr\n" +
 	"| FunExpr\n" +
+	"| MatchExpr\n" + 
+	"| IfExpr\n" +
     "| LetExpr\n" +
 	"| ListDestructExpr\n" +
+	"| Appl_Expr\n" +
 	"| identifier\n" +
+	"| ListExpr\n" + 
 	"| ParenExpr\n" +
 	"| funOp\n" +
-	"| ListExpr\n" + 
-	"| Appl_Expr\n" +
     "| VarientExpr\n" +
     "VarientExpr =  Varient_Label Expr\n" +
     "Varient_Label = \"`\" identifier\n" +
+	"MatchExpr = \"match\" Expr \"with\" \"|\"? MatchExprList \"end\"\n" +
+	"MatchExprList = MatchExprInner \"|\" MatchExprList\n" +
+	"| MatchExprInner \"\" \"\" \n" + 
+	"MatchExprInner = Expr8 arrowOp Expr\n" +
+	"IfExpr = \"if\" Expr \"then\" Expr \"else\" Expr\n" +
 	"FunExpr = funOp Param_List arrowOp Expr \"\" \n" +
     "| \"let\" \"rec\" Fun_Sig_List \"in\" Expr  \n" +
     "| \"let\" Fun_Sig \"in\" Expr \"\" \n" +
@@ -82,10 +81,11 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"| \"{\" \"\" \"_\" \"}\" \n" +
 	"| \"{\" \"\" \"\" \"}\" \n" +
 	"| \"[\" \"\" \"\" \"]\" \n" +
-	"ListDestructExpr = identifier colonOp identifier\n" +
+	"| \"(\" \"0\" \"0\" \")\" \n" +
+	"ListDestructExpr = identifier colonOp Expr\n" +
 	"RecordPatternEl = identifier equalsOp identifier \n" + 
-	"Appl_Expr = Prim_Expr \"\" \n" +
-	"| Appl_Expr Prim_Expr\n" +
+	"Appl_Expr = Appl_Expr Prim_Expr \n" +
+	"| Prim_Expr \"\"\n" +
     "Prim_Expr = intTerm \n" +
     "| boolTerm \n" +
     "| inputTerm \n" +
@@ -118,7 +118,7 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"arrowOp = \"->\"\n" +
 	"boolTerm = \"true\" | \"false\"\n" +
 	"intTerm = digit+\n" +
-	"identifier = (letter|\"_\") (letter | \"_\" | digit)*\n" +
+	"identifier =  ~(\"with\"|\"match\"|\"end\"|\"if\"|\"then\"|\"else\"|\"assert\"|\"assume\"|\"let\"|\"in\"|\"true\"|\"false\"|\"fun\"|\"function\"|\"input\") (letter|\"_\") (letter | \"_\" | digit)*\n" +
 	"ident_start = letter | \"_\"\n" +
 	"ident_cont = letter | \"_\" | digit\n" +
 	"space += commentExpr\n" +
@@ -209,41 +209,38 @@ semanticOps.addOperation<void>('parse()', {
 		if (z.sourceString.length > 0) z.parse();
 	},
 	MatchExpr(x, y, z, w, t, f) {
-		if (y.sourceString.length > 0) {
+		semanticTokensList.push({
+			line: x.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: x.source.getLineAndColumn().colNum - 1,
+			length: x.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: z.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: z.source.getLineAndColumn().colNum - 1,
+			length: z.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		semanticTokensList.push({
+			line: f.source.getLineAndColumn().lineNum - 1, 
+			startCharacter: f.source.getLineAndColumn().colNum - 1,
+			length: f.sourceString.length,
+			tokenType: "keyword",
+			tokenModifiers: []
+		});
+		if (w.sourceString.length > 0) {
 			semanticTokensList.push({
-				line: x.source.getLineAndColumn().lineNum - 1, 
-				startCharacter: x.source.getLineAndColumn().colNum - 1,
-				length: x.sourceString.length,
-				tokenType: "keyword",
+				line: w.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: w.source.getLineAndColumn().colNum - 1,
+				length: w.sourceString.length,
+				tokenType: "parameter",
 				tokenModifiers: []
 			});
-			semanticTokensList.push({
-				line: z.source.getLineAndColumn().lineNum - 1, 
-				startCharacter: z.source.getLineAndColumn().colNum - 1,
-				length: z.sourceString.length,
-				tokenType: "keyword",
-				tokenModifiers: []
-			});
-			semanticTokensList.push({
-				line: f.source.getLineAndColumn().lineNum - 1, 
-				startCharacter: f.source.getLineAndColumn().colNum - 1,
-				length: f.sourceString.length,
-				tokenType: "keyword",
-				tokenModifiers: []
-			});
-			if (w.sourceString.length > 0) {
-				semanticTokensList.push({
-					line: w.source.getLineAndColumn().lineNum - 1, 
-					startCharacter: w.source.getLineAndColumn().colNum - 1,
-					length: w.sourceString.length,
-					tokenType: "parameter",
-					tokenModifiers: []
-				});
-			}
-			y.parse();
-			t.parse();
 		}
-		else x.parse();
+		y.parse();
+		t.parse();
 
 	},
 	MatchExprList(x, y, z) {
@@ -312,22 +309,8 @@ semanticOps.addOperation<void>('parse()', {
 		}
 		else x.parse();
 	},
-	//Arrow Expression
-	Expr8(x, y, z) {
-		if (x.sourceString.length > 0) x.parse();
-		if (y.sourceString.length > 0) {
-			semanticTokensList.push({
-				line: y.source.getLineAndColumn().lineNum - 1, 
-				startCharacter: y.source.getLineAndColumn().colNum - 1,
-				length: y.sourceString.length,
-				tokenType: "member",
-				tokenModifiers: []
-			});
-		}
-		if (z.sourceString.length > 0) z.parse();
-	},
 	//Variable Expression
-	Expr9(x) {
+	Expr8(x) {
 		if (x.sourceString.length > 0) x.parse();
 	},
 	ParenExpr(x, y, z) {
@@ -502,6 +485,12 @@ semanticOps.addOperation<void>('parse()', {
 		});
 		y.parse();
 	},
+	NonemptyListOf(elem, seps, elems) {
+		elem.parse();
+		if (elems.children.length > 0) {
+			elems.children.map(c => c.parse());
+		}
+	},
 	Empty_List(x, y) {
 		semanticTokensList.push({
 			line: x.source.getLineAndColumn().lineNum - 1, 
@@ -570,6 +559,20 @@ semanticOps.addOperation<void>('parse()', {
 		}
 
 	},
+	// FunCall(x, y) {
+	// 	semanticTokensList.push({
+	// 		line: x.source.getLineAndColumn().lineNum - 1, 
+	// 		startCharacter: x.source.getLineAndColumn().colNum - 1,
+	// 		length: x.sourceString.length,
+	// 		tokenType: "function",
+	// 		tokenModifiers: []
+	// 	});
+	// 	if (y.sourceString.length > 0) y.parse();
+	// },
+	// FunParams(x, y) {
+	// 	x.parse();
+	// 	if (y.sourceString.length > 0) y.parse();
+	// },
 	LetExpr(x1, x2, x3, x4, x5, x6) {
 		semanticTokensList.push({
 			line: x1.source.getLineAndColumn().lineNum - 1, 
@@ -848,51 +851,6 @@ class DocumentSemanticTokensProvider implements DocumentSemanticTokensProvider {
 		}
 		semanticTokensList.forEach(function(item) {r.push(item);});
 		return r;
-		// const lines = text.split(/\r\n|\r|\n/);
-		// for (let i = 0; i < lines.length; i++) {
-		// 	const line = lines[i];
-		// 	let currentOffset = 0;
-		// 	do {
-		// 		let pattern = /\b(let|match|rec)\b/g;
-		// 		const match = pattern.exec(line.substring(currentOffset));
-		// 		if (!match) {
-		// 			break;
-		// 		}
-		// 		/*
-		// 		const closeOffset = line.indexOf(' ', openOffset);
-		// 		if (closeOffset === -1) {
-		// 			break;
-		// 		}*/
-		// 		const tokenData = this._parseTextToken(line.substring(match.index, match.index + match[0].length));
-		// 		r.push({
-		// 			line: i,
-		// 			startCharacter: match.index + currentOffset,
-		// 			length: match[0].length,
-		// 			tokenType: tokenData.tokenType,
-		// 			tokenModifiers: tokenData.tokenModifiers
-		// 		});
-		// 		currentOffset += match.index + match[0].length;
-		// 		/*
-		// 		const openOffset = line.indexOf('[', currentOffset);
-		// 		if (openOffset === -1) {
-		// 			break;
-		// 		}
-		// 		const closeOffset = line.indexOf(']', openOffset);
-		// 		if (closeOffset === -1) {
-		// 			break;
-		// 		}
-		// 		const tokenData = this._parseTextToken(line.substring(openOffset + 1, closeOffset));
-		// 		r.push({
-		// 			line: i,
-		// 			startCharacter: openOffset + 1,
-		// 			length: closeOffset - openOffset - 1,
-		// 			tokenType: tokenData.tokenType,
-		// 			tokenModifiers: tokenData.tokenModifiers
-		// 		});
-		// 		currentOffset = closeOffset;*/
-		// 	} while (true);
-		// }
-		// return r;
 	}
 
 	private _parseTextToken(text: string): { tokenType: string; tokenModifiers: string[]; } {

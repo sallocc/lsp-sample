@@ -1,7 +1,7 @@
 Jay {
 	Prog = Expr end
 	| "" end
-	Expr = Expr orOp Expr1
+	Expr =  Expr orOp Expr1
 	| Expr1 "" ""
 	Expr1 = Expr1 andOp Expr2
 	| Expr2 "" ""
@@ -10,63 +10,62 @@ Jay {
 	Expr3 = Expr4 relOp Expr4
 	| Expr4 "" ""
 	Expr4 = Expr5 colonOp Expr4
-	| MatchExpr  "" ""
-	MatchExpr = "match" Expr "with" "|"? MatchExprList "end"
-    | Expr5 "" "" "" "" ""
-	MatchExprList = MatchExprInner "|" MatchExprList
-	| MatchExprInner "" "" 
-	MatchExprInner = Expr9 arrowOp Expr
-	IfExpr = "if" Expr "then" Expr "else" Expr
+	| Expr5  "" ""
+    IfExpr = "if" Expr "then" Expr "else" Expr
 	Expr5 = Expr5 plusOp Expr6
 	| Expr6  "" ""
 	Expr6 = Expr6 mulOp Expr7
 	| Expr7 "" ""
 	Expr7 = asOp Expr8
 	| Expr8 ""
-	Expr8 = Expr9 arrowOp Expr8
-	| Expr9 "" ""
-	Expr9 = boolTerm
+	Expr8 = boolTerm
 	| ListDestructExpr
-	| IfExpr
-	| FunExpr
+    | FunExpr
     | LetExpr
+    | MatchExpr
+    | IfExpr
 	| intTerm
-	| identifier
-	| ParenExpr
-	| funOp
 	| ListExpr
+	| ParenExpr
     | Appl_Expr 
+    | identifier
+	| funOp
     | VarientExpr
+    MatchExpr = "match" Expr "with" "|"? MatchExprList "end"
+	MatchExprList = MatchExprInner "|" MatchExprList
+	| MatchExprInner "" "" 
+	MatchExprInner = Expr8 arrowOp Expr
     VarientExpr =  Varient_Label Expr
     Varient_Label = "`" identifier
-	FunExpr = funOp Param_List arrowOp Expr "" ""
-    | "let" "rec" Fun_Sig_List "in" Expr ""
-    | "let" Fun_Sig "in" Expr "" ""
+    FunExpr = funOp Param_List arrowOp Expr "" 
+    | "let" "rec" Fun_Sig_List "in" Expr 
+    | "let" Fun_Sig "in" Expr "" 
     LetExpr =  "let" identifier equalsOp Expr "in" Expr
     Fun_Sig_List = Fun_Sig "with" Fun_Sig_List
     | Fun_Sig "" ""  
     Fun_Sig = identifier Param_List equalsOp Expr
     Param_List = identifier Param_List
     | identifier ""
-	commentExpr = "#" ~("\n" any) "\n"
+    commentExpr = "#" (~"\n" any)* "\n"
 	ListExpr = "{" NonemptyListOf<RecordPatternEl, ","> "_" "}"
 	| "{" NonemptyListOf<RecordPatternEl, ","> "" "}"
 	| "{" "" "_" "}" 
 	| "{" "" "" "}" 
 	| "[" "" "" "]" 
-	ListDestructExpr = identifier colonOp identifier
+    | "(" "0" "0" ")"
+	ListDestructExpr = identifier colonOp Expr
 	RecordPatternEl = identifier equalsOp identifier 
-	Appl_Expr = Appl_Expr Prim_Expr
-    | Prim_Expr ""
+    Appl_Expr = Appl_Expr Prim_Expr
+    |  Prim_Expr ""
     Prim_Expr = intTerm
     | boolTerm
     | inputTerm
+    | ParenExpr
     | identifier
     | Record
     | Empty_Record
     | List
     | Empty_List
-    | ParenExpr
     | Record_Proj
     Record_Proj = Prim_Expr "." identifier 
     Empty_List = "[" "]"
@@ -75,7 +74,7 @@ Jay {
     Record = "{" Record_Body "}"
     Record_Body = identifier equalsOp Expr "," Record_Body
     | identifier equalsOp Expr "" ""
-	inputTerm = "input"
+    inputTerm = "input"
     ParenExpr = "(" Expr ")"
 	funOp = "fun" | "function"
 	orOp = "or"
@@ -90,8 +89,19 @@ Jay {
 	arrowOp = "->"
 	boolTerm = "true" | "false"
 	intTerm = digit+
-	identifier = (letter|"_") (letter | "_" | digit)*
+	identifier = ~("with"|"match"|"end"|"if"|"then"|"else"|"assert"|"assume"|"let"|"in"|"true"|"false"|"fun"|"function"|"input") (letter|"_") (letter | "_" | digit)*
 	dent_start = letter | "_"
 	ident_cont = letter | "_" | digit
-	space += commentExpr
+    space += commentExpr
+    
+    FunCall = identifier FunParams
+    | identifier ""
+    FunParams =  identifier FunParams
+    | Expr FunParams
+    | Empty_List FunParams
+    | List FunParams
+    | identifier ""
+    | Expr ""
+    | Empty_List ""
+    | List ""
 }
