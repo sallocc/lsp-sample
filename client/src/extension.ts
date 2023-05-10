@@ -85,7 +85,7 @@ const fileGrammar = ohm.grammar("Jay {\n"+
 	"ListDestructExpr = identifier colonOp Expr\n" +
 	"RecordPatternEl = identifier equalsOp identifier \n" + 
 	"Appl_Expr = Appl_Expr Prim_Expr \n" +
-	"| Prim_Expr \"\"\n" +
+	"| Prim_Expr \"\" \n" +
     "Prim_Expr = intTerm \n" +
     "| boolTerm \n" +
     "| inputTerm \n" +
@@ -346,7 +346,27 @@ semanticOps.addOperation<void>('parse()', {
 			tokenType: "member",
 			tokenModifiers: []
 		});
+
+		//Recognize the special empty list operator (0 0)
+		if (y.sourceString === "0" && z.sourceString === "0") {
+			semanticTokensList.push({
+				line: y.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: y.source.getLineAndColumn().colNum - 1,
+				length: y.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+			semanticTokensList.push({
+				line: z.source.getLineAndColumn().lineNum - 1, 
+				startCharacter: z.source.getLineAndColumn().colNum - 1,
+				length: z.sourceString.length,
+				tokenType: "member",
+				tokenModifiers: []
+			});
+			return;
+		}
 		if (y.sourceString.length > 0) {
+			
 			y.asIteration().children.map(c => c.parse());
 		} 
 		if (z.sourceString.length > 0) {
@@ -406,10 +426,22 @@ semanticOps.addOperation<void>('parse()', {
 			}
 	},
 	Appl_Expr(x, y) {
-		x.parse();
+		const xFirstLetter = x.sourceString.charAt(0);
 		if (y.sourceString.length > 0) {
+			//If this Appl_Expr is evaluating to the first two expressions in a sequence, then highlight the first
+			//as a function call
+			if (this.children[0].children[0].children.length === 1 && ((xFirstLetter == "_") || (xFirstLetter.toLowerCase() != xFirstLetter.toUpperCase()))){
+				semanticTokensList.push({
+					line: x.source.getLineAndColumn().lineNum - 1, 
+					startCharacter: x.source.getLineAndColumn().colNum - 1,
+					length: x.sourceString.length,
+					tokenType: "function",
+					tokenModifiers: []
+				});
+			} else x.parse();
 			y.parse();
 		} 
+		else x.parse();
 	},
 	Prim_Expr(x) {
 		x.parse();
