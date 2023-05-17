@@ -1,19 +1,11 @@
-# LSP Example
+# Jay Language Code Highlighting Extension
 
-Heavily documented sample code for https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
+This project was completed as part of a Master's Research Project at Johns Hopkins University.
+Author: Simon Allocca.
 
 ## Added functionality
 
-Added semantic token capability to color text with meaningful tokens.
-
-
-## Functionality
-
-This Language Server works for plain text file. It has the following language features:
-- Completions
-- Diagnostics regenerated on each file change or configuration change
-
-It also includes an End-to-End test.
+Added semantic token capability through an Ohm JavaScript parser (https://ohmjs.org/) to parse text and generate an AST (Abstract Syntax Tree) and associated semantic tokens with certain language constructs. The parser was made based on a Menhir OCaml parser created for a Jay language used in a research lab. This parser code can be found in the repo https://github.com/JHU-PL-Lab/jaylang at the path '/src/lang-jay/parser'.  
 
 ## Structure
 
