@@ -242,12 +242,12 @@ function getColorInformation(document: TextDocumentIdentifier): ColorInformation
 	return [];
 }
 
-connection.onDocumentHighlight((params:DocumentHighlightParams): DocumentHighlight[] => getDocumentHighlights(params.textDocument));
+connection.onDocumentHighlight((params:DocumentHighlightParams): DocumentHighlight[] => []); //getDocumentHighlights(params.textDocument));
 
 function getDocumentHighlights(document: TextDocumentIdentifier): DocumentHighlight[] {
 	
 	const keywords = /\b(let|rec|match|with|end)\b/g;
-	let highlights :DocumentHighlight[] = [];
+	const highlights :DocumentHighlight[] = [];
 	const resolvedDocument: TextDocument|undefined = documents.get(document.uri);
 	if (!resolvedDocument) {
 		return [];
@@ -315,11 +315,11 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 				}
 			];
 		}
-		diagnostics.push(diagnostic);
+		//diagnostics.push(diagnostic);
 	}
 
 	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+	//connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
 connection.onDidChangeWatchedFiles(_change => {
@@ -333,18 +333,19 @@ connection.onCompletion(
 		// The pass parameter contains the position of the text document in
 		// which code complete got requested. For the example we ignore this
 		// info and always provide the same completion items.
-		return [
-			{
-				label: 'TypeScript',
-				kind: CompletionItemKind.Text,
-				data: 1
-			},
-			{
-				label: 'JavaScript',
-				kind: CompletionItemKind.Text,
-				data: 2
-			}
-		];
+		return [];
+		// return [
+		// 	{
+		// 		label: 'TypeScript',
+		// 		kind: CompletionItemKind.Text,
+		// 		data: 1
+		// 	},
+		// 	{
+		// 		label: 'JavaScript',
+		// 		kind: CompletionItemKind.Text,
+		// 		data: 2
+		// 	}
+		// ];
 	}
 );
 
