@@ -1,3 +1,7 @@
+/* ----------
+	Author: Simon Allocca
+----------- */
+
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { workspace, ExtensionContext, commands, languages, SemanticTokensLegend } from 'vscode';

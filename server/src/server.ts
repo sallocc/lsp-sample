@@ -1,3 +1,7 @@
+/* ----------
+	Author: Simon Allocca
+----------- */
+
 import {
 	createConnection,
 	TextDocuments,
